@@ -1,11 +1,10 @@
-package se.grace.vivian.traits;
+package se.grace.vivian.traits.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Log;
-import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -16,6 +15,14 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import java.util.Arrays;
+
+import se.grace.vivian.traits.Api;
+import se.grace.vivian.traits.KeyStoring;
+import se.grace.vivian.traits.R;
+import se.grace.vivian.traits.SessionManager;
+import se.grace.vivian.traits.traits.User;
+
 public class PersonalitiesActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
@@ -23,6 +30,7 @@ public class PersonalitiesActivity extends AppCompatActivity
     public static final String TAG = LoginActivity.class.getSimpleName();
     private Api mApi = new Api();
     private KeyStoring mKeyStoring = new KeyStoring();
+    private User mUser;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -51,30 +59,50 @@ public class PersonalitiesActivity extends AppCompatActivity
         navigationView.setNavigationItemSelectedListener(this);
 
         Intent intent = getIntent();
-        String message = intent.getStringExtra(LoginActivity.TRAITS_USER);
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        //String message = intent.getStringExtra(LoginActivity.TRAITS_USER);
+        mUser = intent.getParcelableExtra(LoginActivity.TRAITS_USER);  //getParcelableArrayExtra(LoginActivity.TRAITS_USER);
+        //mUser = Parcel.obtain() .copyOf(parcelables, User.class); //Arrays.copyOf(parcelables, parcelables.length, User.class);
+        Log.d(TAG, mUser.getName() + "");
+        Toast.makeText(this, mUser.getName(), Toast.LENGTH_LONG).show();
 
-        String status = manager.getPreferences(PersonalitiesActivity.this,"status");
-        if (status.equals("1")) {
-            Log.d(TAG, "User already signed in!");
-            //Get user
-            String username = manager.getPreferences(PersonalitiesActivity.this, "username");
-            Log.d(TAG, username);
-            String encryptedPassword = manager.getPreferences(PersonalitiesActivity.this, "password");
-            Log.d(TAG, encryptedPassword);
-            String decryptedPassword = mKeyStoring.decryptString("TraitsPassword", encryptedPassword);
-            Log.d(TAG, decryptedPassword);
-            /*try {
-                Log.d(TAG, "Get signed in user info");
-                //postLogin(username, decryptedPassword);
-                mApi.postLogin(username, decryptedPassword, PersonalitiesActivity.this);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }*/
+        if(mUser.getUserTypeParts() != null && mUser.getUserTypeParts().size() > 0){
+            Log.d(TAG, "User Type parts: " + mUser.getUserTypeParts().size());
+            Log.d(TAG, "User Type parts: " + mUser.getUserTypeParts().get(0).getPersonalityType());
         }
-        else{
-            Log.d(TAG, "status: " + status);
 
+        if(mUser.getUserTraits() != null && mUser.getUserTraits().size() > 0){
+            Log.d(TAG, "User Traits: " + mUser.getUserTraits().size());
+            Log.d(TAG, "User Traits: " + mUser.getUserTraits().get(0).getPersonalityType());
+        }
+
+
+        if(mUser.getUsername() == null) {
+            String status = manager.getPreferences(PersonalitiesActivity.this,"status");
+
+            //if (status.equals("1") && message.length() <= 16) {
+            if (status.equals("1")) {
+                Log.d(TAG, "User already signed in!");
+                //Get user
+                String username = manager.getPreferences(PersonalitiesActivity.this, "username");
+                Log.d(TAG, username);
+                String encryptedPassword = manager.getPreferences(PersonalitiesActivity.this, "password");
+                Log.d(TAG, encryptedPassword);
+                String decryptedPassword = mKeyStoring.decryptString("TraitsPassword", encryptedPassword);
+                Log.d(TAG, decryptedPassword);
+
+                try {
+                    Log.d(TAG, "Get signed in user info");
+                    //postLogin(username, decryptedPassword);
+                    mApi.postLogin(username, decryptedPassword, PersonalitiesActivity.this);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            else{
+                Log.d(TAG, "status: " + status);
+
+            }
         }
     }
 

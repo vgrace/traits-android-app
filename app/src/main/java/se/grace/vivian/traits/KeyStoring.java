@@ -4,7 +4,6 @@ import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -22,6 +21,8 @@ import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
 
+import se.grace.vivian.traits.ui.LoginActivity;
+
 /**
  * Created by Vivi on 2016-11-06.
  */
@@ -36,7 +37,7 @@ public class KeyStoring {
             keyStore.load(null);
         }
         catch(Exception e) {}
-        refreshKeys();
+        //refreshKeys();
 
         // Key to encrypt password
         createNewKeys("TraitsPassword");
@@ -50,7 +51,7 @@ public class KeyStoring {
             while (aliases.hasMoreElements()) {
                 keyAliases.add(aliases.nextElement());
             }
-            Log.d(TAG, keyAliases.toString());
+            Log.d(TAG, "Keys: " + keyAliases.size() );
         }
         catch(Exception e) {}
 
@@ -94,7 +95,7 @@ public class KeyStoring {
             //Toast.makeText(this, "Exception " + e.getMessage() + " occured", Toast.LENGTH_LONG).show();
             Log.e(TAG, Log.getStackTraceString(e));
         }
-        refreshKeys();
+        //refreshKeys();
     }
 
     public void deleteKey(String alias) {
@@ -128,7 +129,7 @@ public class KeyStoring {
 
             byte [] vals = outputStream.toByteArray();
             String encryptedText = Base64.encodeToString(vals, Base64.DEFAULT);
-            Log.d(TAG, encryptedText);
+            //Log.d(TAG, encryptedText);
             return  encryptedText;
             //encryptedText.setText(Base64.encodeToString(vals, Base64.DEFAULT));
         } catch (Exception e) {

@@ -1,4 +1,4 @@
-package se.grace.vivian.traits;
+package se.grace.vivian.traits.ui;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -6,12 +6,8 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.security.KeyPairGeneratorSpec;
-import android.security.keystore.KeyGenParameterSpec;
-import android.security.keystore.KeyProperties;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
-import android.support.v7.app.AppCompatActivity;
 import android.app.LoaderManager.LoaderCallbacks;
 
 import android.content.CursorLoader;
@@ -23,9 +19,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
-import android.telecom.Call;
 import android.text.TextUtils;
-import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -36,40 +30,19 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import org.json.JSONException;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.math.BigInteger;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.interfaces.RSAPrivateKey;
-import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Enumeration;
 import java.util.List;
 
-import javax.crypto.Cipher;
-import javax.crypto.CipherInputStream;
-import javax.crypto.CipherOutputStream;
-import javax.security.auth.x500.X500Principal;
-
-import okhttp3.Callback;
-import okhttp3.FormBody;
 import okhttp3.MediaType;
-import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
+import se.grace.vivian.traits.Api;
+import se.grace.vivian.traits.KeyStoring;
+import se.grace.vivian.traits.R;
+import se.grace.vivian.traits.Router;
+import se.grace.vivian.traits.SessionManager;
+import se.grace.vivian.traits.traits.User;
 
 import static android.Manifest.permission.READ_CONTACTS;
 
@@ -163,9 +136,9 @@ public class LoginActivity extends Activity implements LoaderCallbacks<Cursor>{
 
         //Check if user is signed in
         String status = manager.getPreferences(LoginActivity.this,"status");
-        Log.d("status",status);
+        //Log.d("status",status);
         if (status.equals("1")){
-            Log.d(TAG, "User already signed in!");
+            /*
             //Get user
             String username = manager.getPreferences(LoginActivity.this, "username");
             Log.d(TAG, username);
@@ -173,7 +146,7 @@ public class LoginActivity extends Activity implements LoaderCallbacks<Cursor>{
             Log.d(TAG, encryptedPassword);
             String decryptedPassword = mKeyStoring.decryptString("TraitsPassword", encryptedPassword);
             Log.d(TAG, decryptedPassword);
-            /*try {
+            try {
                 Log.d(TAG, "Get signed in user info");
                 //postLogin(username, decryptedPassword);
                 mApi.postLogin(username, decryptedPassword, LoginActivity.this);
@@ -181,8 +154,9 @@ public class LoginActivity extends Activity implements LoaderCallbacks<Cursor>{
                 e.printStackTrace();
             }*/
 
+            Log.d(TAG, "User already signed in!");
             // Go to personalities activity
-            mRouter.GoToPersonalitiesActivity(LoginActivity.this, username);
+            mRouter.GoToPersonalitiesActivity(LoginActivity.this, new User());
         }
     }
 
@@ -321,14 +295,14 @@ public class LoginActivity extends Activity implements LoaderCallbacks<Cursor>{
     /* END KEYSTORE*/
 
 
-    protected void GoToPersonalitiesActivity(String username)
+    /*protected void GoToPersonalitiesActivity(String username)
     {
         //Go to personalities activity
         Intent intent = new Intent(LoginActivity.this, PersonalitiesActivity.class);
         intent.putExtra(TRAITS_USER, "The user was signed in: " + username);
         startActivity(intent);
 
-    }
+    }*/
 
     private void populateAutoComplete() {
         if (!mayRequestContacts()) {

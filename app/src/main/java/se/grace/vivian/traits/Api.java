@@ -1,10 +1,14 @@
 package se.grace.vivian.traits;
 
 import android.content.Context;
-import android.content.Intent;
 import android.util.Log;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
+import java.util.ArrayList;
 
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -12,6 +16,10 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import se.grace.vivian.traits.traits.User;
+import se.grace.vivian.traits.traits.UserTraits;
+import se.grace.vivian.traits.traits.UserTypePart;
+import se.grace.vivian.traits.ui.LoginActivity;
 
 /**
  * Created by Vivi on 2016-11-06.
@@ -22,6 +30,7 @@ public class Api {
     public static final String TAG = LoginActivity.class.getSimpleName();
     public static final String TRAITS_USER = "TRAITS_USER";
     private Router mRouter = new Router();
+    private User mUser;
     protected okhttp3.Call post(String url, String json, Callback callback) {
         RequestBody body = RequestBody.create(JSON, json);
         Request request = new Request.Builder()
@@ -42,7 +51,7 @@ public class Api {
                 "  \"password\": \""+password+"\"\n" +
                 "}";
 
-        Log.d(TAG, bodyJson);
+        //Log.d(TAG, bodyJson);
 
         post(url, bodyJson, new Callback() {
             @Override
@@ -59,7 +68,14 @@ public class Api {
                 if (response.isSuccessful()) {
                     final String responseStr = response.body().string();
                     Log.d(TAG, responseStr);
-                    mRouter.GoToPersonalitiesActivity(context, responseStr);
+
+
+                    try {
+                        mUser = parseUser(responseStr);
+                        mRouter.GoToPersonalitiesActivity(context, mUser);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
 
                     //Run in main thread
                     /*runOnUiThread(new Runnable() {
@@ -80,12 +96,82 @@ public class Api {
         });
     }
 
-    /*protected void GoToPersonalitiesActivity(Context context, String username)
-    {
-        //Go to personalities activity
-        Intent intent = new Intent(context, PersonalitiesActivity.class);
-        intent.putExtra(TRAITS_USER, "The user was signed in: " + username);
-        context.startActivity(intent);
+    private User parseUser (String jsonData) throws JSONException {
+        JSONObject userJson = new JSONObject(jsonData);
+        User user = new User();
+        user.setId(userJson.getString("_id"));
+        Log.d(TAG, "id: " + userJson.getString("_id"));
+        user.setName(userJson.getString("name"));
+        Log.d(TAG, "Name: " + userJson.getString("name"));
+        user.setLastName(userJson.getString("lastname"));
+        Log.d(TAG, "Lastname: " + userJson.getString("lastname"));
+        user.setEmail(userJson.getString("email"));
+        Log.d(TAG, "email: " + userJson.getString("email"));
+        user.setUsername(userJson.getString("username"));
+        Log.d(TAG, "Username: " + userJson.getString("username"));
+        user.setUserTypeParts(parseUserTypeParts(jsonData));
+        user.setUserTraits(parseUserTraits(jsonData));
+        return user;
+    }
 
+    private ArrayList<UserTypePart> parseUserTypeParts(String jsonData) throws JSONException{
+        JSONObject userJson = new JSONObject(jsonData);
+        JSONArray usertypepartsJson = userJson.getJSONArray("usertypeparts");
+        ArrayList<UserTypePart> userTypeParts = new ArrayList<UserTypePart>();
+        for(int i = 0; i<usertypepartsJson.length(); i++){
+            UserTypePart userTypePart = new UserTypePart();
+            JSONObject jsonUserTypePart = usertypepartsJson.getJSONObject(i);
+            userTypePart.setPersonalityType(jsonUserTypePart.getString("personalitytype"));
+            userTypePart.setPercentage(jsonUserTypePart.getString("percentage"));
+            userTypeParts.add(userTypePart);
+        }
+        return userTypeParts;
+    }
+
+    private ArrayList<UserTraits> parseUserTraits(String jsonData) throws JSONException{
+        JSONObject userJson = new JSONObject(jsonData);
+        JSONArray usertraitsJson = userJson.getJSONArray("usertraits");
+        ArrayList<UserTraits> userTraits = new ArrayList<UserTraits>();
+        Log.d(TAG, "Usertraits size: " + usertraitsJson.length());
+        for(int i = 0; i<usertraitsJson.length(); i++){
+            UserTraits userTrait = new UserTraits();
+            JSONObject jsonUserTraits = usertraitsJson.getJSONObject(i);
+            userTrait.setPersonalityType(jsonUserTraits.getString("personalitytype"));
+            Log.d(TAG, jsonUserTraits.getString("personalitytype"));
+            JSONArray traitsList = jsonUserTraits.getJSONArray("traits");
+            Log.d(TAG, "Traits size: " + traitsList.length());
+            String[] traitsArr = new String[traitsList.length()];
+            // loop through the array itemList and get the items
+            for(int j=0;j<traitsList.length();j++)
+            {
+                traitsArr[j] = traitsList.getString(j); // item at index i
+            }
+            userTrait.setTraits(traitsArr);
+            userTraits.add(userTrait);
+        }
+        return userTraits;
+    }
+
+    /*
+    private Day[] getDailyForecast(String jsonData) throws JSONException {
+        JSONObject forecast = new JSONObject(jsonData);
+        String timezone = forecast.getString("timezone");
+        JSONObject daily = forecast.getJSONObject("daily");
+        JSONArray data = daily.getJSONArray("data");
+        Day[] days = new Day[data.length()];
+        for(int i = 0; i< data.length(); i++){
+            Day day = new Day();
+            JSONObject jsonDay = data.getJSONObject(i);
+
+            day.setSummary(jsonDay.getString("summary"));
+            day.setIcon(jsonDay.getString("icon"));
+            day.setTemperatureMax(jsonDay.getDouble("temperatureMax"));
+            day.setTime(jsonDay.getLong("time"));
+            day.setTimezone(timezone);
+
+            days[i] = day;
+        }
+        return days;
+    }
     }*/
 }
