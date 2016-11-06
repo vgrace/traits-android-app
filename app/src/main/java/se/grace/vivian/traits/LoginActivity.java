@@ -6,6 +6,9 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.security.KeyPairGeneratorSpec;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -22,6 +25,7 @@ import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.telecom.Call;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -32,12 +36,31 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.json.JSONException;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigInteger;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Enumeration;
 import java.util.List;
+
+import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
+import javax.security.auth.x500.X500Principal;
 
 import okhttp3.Callback;
 import okhttp3.FormBody;
@@ -61,6 +84,12 @@ public class LoginActivity extends Activity implements LoaderCallbacks<Cursor>{
     public static final String TAG = LoginActivity.class.getSimpleName();
     private static final int REQUEST_READ_CONTACTS = 0;
     public static final String TRAITS_USER = "TRAITS_USER";
+    public SessionManager manager;
+    private Api mApi = new Api();
+    private Router mRouter = new Router();
+    KeyStore keyStore;
+    List<String> keyAliases;
+    KeyStoring mKeyStoring = new KeyStoring();
 
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
     //protected OkHttpClient client = new OkHttpClient();
@@ -83,10 +112,28 @@ public class LoginActivity extends Activity implements LoaderCallbacks<Cursor>{
     private View mProgressView;
     private View mLoginFormView;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+//        //Safe store user creds
+//        try {
+//            keyStore = KeyStore.getInstance("AndroidKeyStore");
+//            keyStore.load(null);
+//        }
+//        catch(Exception e) {}
+//        mKeyStoring.refreshKeys();
+//
+//        // Key to encrypt password
+//        mKeyStoring.createNewKeys("TraitsPassword");
+//        //deleteKey("TraitsPassword");
+
         setContentView(R.layout.activity_login);
+
+        //Save user signed in
+        manager = new SessionManager();
+
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
         populateAutoComplete();
@@ -113,6 +160,174 @@ public class LoginActivity extends Activity implements LoaderCallbacks<Cursor>{
 
         mLoginFormView = findViewById(R.id.login_form);
         mProgressView = findViewById(R.id.login_progress);
+
+        //Check if user is signed in
+        String status = manager.getPreferences(LoginActivity.this,"status");
+        Log.d("status",status);
+        if (status.equals("1")){
+            Log.d(TAG, "User already signed in!");
+            //Get user
+            String username = manager.getPreferences(LoginActivity.this, "username");
+            Log.d(TAG, username);
+            String encryptedPassword = manager.getPreferences(LoginActivity.this, "password");
+            Log.d(TAG, encryptedPassword);
+            String decryptedPassword = mKeyStoring.decryptString("TraitsPassword", encryptedPassword);
+            Log.d(TAG, decryptedPassword);
+            /*try {
+                Log.d(TAG, "Get signed in user info");
+                //postLogin(username, decryptedPassword);
+                mApi.postLogin(username, decryptedPassword, LoginActivity.this);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }*/
+
+            // Go to personalities activity
+            mRouter.GoToPersonalitiesActivity(LoginActivity.this, username);
+        }
+    }
+
+    /* KEYSTORE */
+//    private void refreshKeys() {
+//        keyAliases = new ArrayList<>();
+//        try {
+//            Enumeration<String> aliases = keyStore.aliases();
+//            while (aliases.hasMoreElements()) {
+//                keyAliases.add(aliases.nextElement());
+//            }
+//            Log.d(TAG, keyAliases.toString());
+//        }
+//        catch(Exception e) {}
+//
+//        //if(listAdapter != null)
+//            //listAdapter.notifyDataSetChanged();
+//    }
+//
+//    public void createNewKeys(String alias) {
+//        //String alias = ""; //aliasText.getText().toString();
+//        try {
+//            // Create new key if needed
+//            if (!keyStore.containsAlias(alias)) {
+//                Log.d(TAG, "Create key");
+//                Calendar start = Calendar.getInstance();
+//                Calendar end = Calendar.getInstance();
+//                end.add(Calendar.YEAR, 1);
+//
+//                KeyPairGenerator kpg = KeyPairGenerator.getInstance(
+//                        KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore");
+//
+//                kpg.initialize(new KeyGenParameterSpec.Builder(
+//                        alias, KeyProperties.PURPOSE_DECRYPT)
+//                        .setDigests(KeyProperties.DIGEST_SHA256)
+//                        .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PSS)
+//                        .build());
+//                KeyPair keyPair = kpg.generateKeyPair();
+//
+//                /*KeyPairGeneratorSpec spec = new KeyPairGeneratorSpec.Builder(this)
+//                        .setAlias(alias)
+//                        .setSubject(new X500Principal("CN=Sample Name, O=Android Authority"))
+//                        .setSerialNumber(BigInteger.ONE)
+//                        .setStartDate(start.getTime())
+//                        .setEndDate(end.getTime())
+//                        .build();
+//
+//                KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA", "AndroidKeyStore");
+//                generator.initialize(spec);
+//                KeyPair keyPair = generator.generateKeyPair();*/
+//            }
+//        } catch (Exception e) {
+//            Toast.makeText(this, "Exception " + e.getMessage() + " occured", Toast.LENGTH_LONG).show();
+//            Log.e(TAG, Log.getStackTraceString(e));
+//        }
+//        refreshKeys();
+//    }
+//
+//    public void deleteKey(String alias) {
+//        try {
+//            keyStore.deleteEntry(alias);
+//            refreshKeys();
+//        } catch (KeyStoreException e) {
+//            Log.e(TAG, Log.getStackTraceString(e));
+//        }
+//    }
+//
+//    public String encryptString(String alias, String initialText) {
+//        try {
+//            KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry)keyStore.getEntry(alias, null);
+//            RSAPublicKey publicKey = (RSAPublicKey) privateKeyEntry.getCertificate().getPublicKey();
+//
+//            //String initialText = "Text to encrypt"; //startText.getText().toString();
+//            if(initialText.isEmpty()) {
+//                Toast.makeText(this, "Enter text in the 'Initial Text' widget", Toast.LENGTH_LONG).show();
+//                return "";
+//            }
+//
+//            Cipher inCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding", "AndroidOpenSSL");
+//            inCipher.init(Cipher.ENCRYPT_MODE, publicKey);
+//
+//            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+//            CipherOutputStream cipherOutputStream = new CipherOutputStream(
+//                    outputStream, inCipher);
+//            cipherOutputStream.write(initialText.getBytes("UTF-8"));
+//            cipherOutputStream.close();
+//
+//            byte [] vals = outputStream.toByteArray();
+//            String encryptedText = Base64.encodeToString(vals, Base64.DEFAULT);
+//            Log.d(TAG, encryptedText);
+//            return  encryptedText;
+//            //encryptedText.setText(Base64.encodeToString(vals, Base64.DEFAULT));
+//        } catch (Exception e) {
+//            Toast.makeText(this, "Exception " + e.getMessage() + " occured", Toast.LENGTH_LONG).show();
+//            Log.e(TAG, Log.getStackTraceString(e));
+//            return "";
+//        }
+//    }
+//
+//    public String decryptString(String alias, String cipherText) {
+//        try {
+//            KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry)keyStore.getEntry(alias, null);
+//            //RSAPrivateKey privateKey = (RSAPrivateKey) privateKeyEntry.getPrivateKey();
+//
+//            //Cipher output = Cipher.getInstance("RSA/ECB/PKCS1Padding", "AndroidOpenSSL");
+//            Cipher output = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+//            //output.init(Cipher.DECRYPT_MODE, privateKey);
+//            output.init(Cipher.DECRYPT_MODE, privateKeyEntry.getPrivateKey());
+//
+//            //String cipherText = encryptedText.getText().toString();
+//            CipherInputStream cipherInputStream = new CipherInputStream(
+//                    new ByteArrayInputStream(Base64.decode(cipherText, Base64.DEFAULT)), output);
+//            ArrayList<Byte> values = new ArrayList<>();
+//            int nextByte;
+//            while ((nextByte = cipherInputStream.read()) != -1) {
+//                values.add((byte)nextByte);
+//            }
+//
+//            byte[] bytes = new byte[values.size()];
+//            for(int i = 0; i < bytes.length; i++) {
+//                bytes[i] = values.get(i).byteValue();
+//            }
+//
+//            String finalText = new String(bytes, 0, bytes.length, "UTF-8");
+//            //Log.d(TAG, finalText);
+//            return finalText;
+//            //decryptedText.setText(finalText);
+//
+//        } catch (Exception e) {
+//            Toast.makeText(this, "Exception " + e.getMessage() + " occured", Toast.LENGTH_LONG).show();
+//            Log.e(TAG, Log.getStackTraceString(e));
+//            return "";
+//        }
+//    }
+
+    /* END KEYSTORE*/
+
+
+    protected void GoToPersonalitiesActivity(String username)
+    {
+        //Go to personalities activity
+        Intent intent = new Intent(LoginActivity.this, PersonalitiesActivity.class);
+        intent.putExtra(TRAITS_USER, "The user was signed in: " + username);
+        startActivity(intent);
+
     }
 
     private void populateAutoComplete() {
@@ -311,6 +526,82 @@ public class LoginActivity extends Activity implements LoaderCallbacks<Cursor>{
         int IS_PRIMARY = 1;
     }
 
+    //private final OkHttpClient client = new OkHttpClient();
+    /*public void test() throws Exception
+    {
+        RequestBody formBody = new FormBody.Builder().add("email", "test").build();
+        Request request = new Request.Builder().url("http://traits-app-api.herokuapp.com/api/usersignin").post(formBody).build();
+        Response response = client.newCall(request).execute();
+        if (!response.isSuccessful()) throw new IOException
+                ("Unexpected code " + response); System.out.println(response.body().string());
+    }
+
+    String getTest(String url) throws IOException {
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+
+        Response response = client.newCall(request).execute();
+        return response.body().string();
+    }
+
+    protected okhttp3.Call post(String url, String json, Callback callback) {
+        RequestBody body = RequestBody.create(JSON, json);
+        Request request = new Request.Builder()
+                .url(url)
+                .post(body)
+                .build();
+        okhttp3.Call call = client.newCall(request);
+        call.enqueue(callback);
+        return call;
+    }
+
+    private void postLogin(String username, String password) throws Exception {
+        //Log.d(TAG, getTest("http://traits-app-api.herokuapp.com/api/personality"));
+        String url = "http://traits-app-api.herokuapp.com/api/usersignin";
+        String bodyJson = "{\n" +
+                "  \"email\": \""+username+"\",\n" +
+                "  \"password\": \""+password+"\"\n" +
+                "}";
+
+        Log.d(TAG, bodyJson);
+
+        post(url, bodyJson, new Callback() {
+            @Override
+            public void onFailure(okhttp3.Call call, IOException e) {
+                // Something went wrong
+                if(e.getMessage() != null)
+                    Log.d(TAG, e.getMessage());
+                else
+                    Log.d(TAG, "Failed to call POST");
+            }
+
+            @Override
+            public void onResponse(okhttp3.Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    final String responseStr = response.body().string();
+                    Log.d(TAG, responseStr);
+
+
+                    //Run in main thread
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                GoToPersonalitiesActivity(responseStr);
+
+                            }
+                        });
+
+                    // Do what you want to do with the response.
+                } else {
+                    // Request not successful
+                    Log.d(TAG, "Request not successful: "  +response.code() +" : "+ response.message());
+
+                }
+            }
+        });
+    }*/
+
     /**
      * Represents an asynchronous login/registration task used to authenticate
      * the user.
@@ -325,97 +616,23 @@ public class LoginActivity extends Activity implements LoaderCallbacks<Cursor>{
             mPassword = password;
         }
 
-        //private final OkHttpClient client = new OkHttpClient();
-        public void test() throws Exception
-        {
-            RequestBody formBody = new FormBody.Builder().add("email", "test").build();
-            Request request = new Request.Builder().url("http://traits-app-api.herokuapp.com/api/usersignin").post(formBody).build();
-            Response response = client.newCall(request).execute();
-            if (!response.isSuccessful()) throw new IOException
-                ("Unexpected code " + response); System.out.println(response.body().string());
-        }
-
-        String getTest(String url) throws IOException {
-            Request request = new Request.Builder()
-                    .url(url)
-                    .build();
-
-            Response response = client.newCall(request).execute();
-            return response.body().string();
-        }
-
-        protected okhttp3.Call post(String url, String json, Callback callback) {
-            RequestBody body = RequestBody.create(JSON, json);
-            Request request = new Request.Builder()
-                    .url(url)
-                    .post(body)
-                    .build();
-            okhttp3.Call call = client.newCall(request);
-            call.enqueue(callback);
-            return call;
-        }
-
-        private void postLogin(String username, String password) throws Exception {
-            Log.d(TAG, getTest("http://traits-app-api.herokuapp.com/api/personality"));
-            String url = "http://traits-app-api.herokuapp.com/api/usersignin";
-            String bodyJson = "{\n" +
-                    "  \"email\": \""+username+"\",\n" +
-                    "  \"password\": \""+password+"\"\n" +
-                    "}";
-
-            Log.d(TAG, bodyJson);
-
-            post(url, bodyJson, new Callback() {
-                @Override
-                public void onFailure(okhttp3.Call call, IOException e) {
-                    // Something went wrong
-                    if(e.getMessage() != null)
-                        Log.d(TAG, e.getMessage());
-                    else
-                        Log.d(TAG, "Failed to call POST");
-                }
-
-                @Override
-                public void onResponse(okhttp3.Call call, Response response) throws IOException {
-                    if (response.isSuccessful()) {
-                        String responseStr = response.body().string();
-                        Log.d(TAG, responseStr);
-
-                        //Run in main thread
-                        /*runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-
-
-                            }
-                        });*/
-
-                        // Do what you want to do with the response.
-                    } else {
-                        // Request not successful
-                        Log.d(TAG, "Request not successful: "  +response.code() +" : "+ response.message());
-
-                    }
-                }
-            });
-        }
-
         @Override
         protected Boolean doInBackground(Void... params) {
             // TODO: attempt authentication against a network service.
             // Call signin from API
             try {
-                postLogin(mEmail, mPassword);
+                //postLogin(mEmail, mPassword);
+                mApi.postLogin(mEmail, mPassword, LoginActivity.this);
             } catch (Exception e) {
                 e.printStackTrace();
             }
 
-            try {
+            /*try {
                 // Simulate network access.
                 Thread.sleep(2000);
             } catch (InterruptedException e) {
                 return false;
-            }
+            }*/
 
             for (String credential : DUMMY_CREDENTIALS) {
                 String[] pieces = credential.split(":");
@@ -429,6 +646,8 @@ public class LoginActivity extends Activity implements LoaderCallbacks<Cursor>{
             return true;
         }
 
+
+
         @Override
         protected void onPostExecute(final Boolean success) {
             mAuthTask = null;
@@ -437,9 +656,22 @@ public class LoginActivity extends Activity implements LoaderCallbacks<Cursor>{
             if (success) {
                 //finish();
                 // Go to main activity
-                Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                /*Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                 intent.putExtra(TRAITS_USER, "The user was signed in: " + mEmailView.getText().toString());
-                startActivity(intent);
+                startActivity(intent);*/
+
+                // For auto login user in future
+                manager.setPreferences(LoginActivity.this, "status", "1");
+                manager.setPreferences(LoginActivity.this, "username", mEmail);
+                String encrPassword = mKeyStoring.encryptString("TraitsPassword", mPassword);
+                manager.setPreferences(LoginActivity.this, "password", encrPassword);
+                Log.d(TAG, "ON POST EXECUTE!");
+                //Go to personalities activity
+                //GoToPersonalitiesActivity(mEmailView.getText().toString());
+
+                /*Intent intent = new Intent(LoginActivity.this, PersonalitiesActivity.class);
+                intent.putExtra(TRAITS_USER, "The user was signed in: " + mEmailView.getText().toString());
+                startActivity(intent);*/
 
             } else {
                 mPasswordView.setError(getString(R.string.error_incorrect_password));
