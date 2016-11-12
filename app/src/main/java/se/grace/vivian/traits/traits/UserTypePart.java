@@ -3,10 +3,14 @@ package se.grace.vivian.traits.traits;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import java.util.Comparator;
+
+import static java.lang.Integer.parseInt;
+
 /**
  * Created by Vivi on 2016-11-06.
  */
-public class UserTypePart implements Parcelable {
+public class UserTypePart implements Parcelable, Comparator<UserTypePart> {
 
     //"personalitytype": "string",
     //            "percentage": "string",
@@ -72,4 +76,11 @@ public class UserTypePart implements Parcelable {
             return new UserTypePart[size];
         }
     };
+
+
+    @Override
+    public int compare(UserTypePart o1, UserTypePart o2) {
+        return parseInt(o2.getPercentage()) - parseInt(o1.getPercentage());
+    }
+
 }

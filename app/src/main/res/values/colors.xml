@@ -3,4 +3,21 @@
     <color name="colorPrimary">#3f3e3f</color>
     <color name="colorPrimaryDark">#262426</color>
     <color name="colorAccent">#17a39a</color>
+    <!--traits colors-->
+    <color name="colorEstj">#641511</color>
+    <color name="colorEsfj">#bc4b3d</color>
+    <color name="colorIstj">#9c464d</color>
+    <color name="colorIsfj">#b0643c</color>
+    <color name="colorEstp">#33453c</color>
+    <color name="colorEsfp">#5c832f</color>
+    <color name="colorIsfp">#d9a919</color>
+    <color name="colorIstp">#3b322d</color>
+    <color name="colorEntj">#214859</color>
+    <color name="colorEntp">#386675</color>
+    <color name="colorIntj">#17a39a</color>
+    <color name="colorIntp">#425460</color>
+    <color name="colorInfj">#2a2c3f</color>
+    <color name="colorEnfp">#3e3139</color>
+    <color name="colorInfp">#5e3345</color>
+    <color name="colorEnfj">#262426</color>
 </resources>
