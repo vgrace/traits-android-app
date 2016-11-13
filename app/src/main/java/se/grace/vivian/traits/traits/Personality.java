@@ -1,26 +1,16 @@
 package se.grace.vivian.traits.traits;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import java.util.ArrayList;
 
 /**
  * Created by Vivi on 2016-11-12.
  */
 
-public class Personality {
-    /*
-    * "personalities": [
-    {
-      "id": "string",
-      "type": "string",
-      "totalfrequency": "string",
-      "malefrequency": "string",
-      "femalefrequency": "string",
-      "description": "string",
-      "typefull": "string",
-      "color": "string"
-    }
-  ]
-    * */
+public class Personality implements Parcelable{
+
     private String mId;
     private String mType;
     private String mTotalFrequency;
@@ -28,15 +18,6 @@ public class Personality {
     private String mFemaleFrequency;
     private String mDescription;
     private String mTypeFull;
-    private ArrayList<Trait> mTraits;
-
-    public ArrayList<Trait> getTraits() {
-        return mTraits;
-    }
-
-    public void setTraits(ArrayList<Trait> traits) {
-        mTraits = traits;
-    }
 
     public String getId() {
         return mId;
@@ -93,4 +74,45 @@ public class Personality {
     public void setTypeFull(String typeFull) {
         mTypeFull = typeFull;
     }
+
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(mId);
+        dest.writeString(mType);
+        dest.writeString(mTotalFrequency);
+        dest.writeString(mMaleFrequency);
+        dest.writeString(mFemaleFrequency);
+        dest.writeString(mDescription);
+        dest.writeString(mTypeFull);
+    }
+
+    protected Personality(Parcel in) {
+        mId = in.readString();
+        mType = in.readString();
+        mTotalFrequency = in.readString();
+        mMaleFrequency = in.readString();
+        mFemaleFrequency = in.readString();
+        mDescription = in.readString();
+        mTypeFull = in.readString();
+    }
+
+    public Personality(){}
+
+    public static final Creator<Personality> CREATOR = new Creator<Personality>() {
+        @Override
+        public Personality createFromParcel(Parcel in) {
+            return new Personality(in);
+        }
+
+        @Override
+        public Personality[] newArray(int size) {
+            return new Personality[size];
+        }
+    };
 }

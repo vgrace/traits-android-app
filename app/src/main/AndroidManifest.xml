@@ -31,6 +31,11 @@
             android:label="@string/title_activity_personalities"
             android:theme="@style/AppTheme.NoActionBar">
         </activity>
+        <activity
+            android:name=".ui.TraitsActivity"
+            android:label="@string/title_activity_traits"
+            android:theme="@style/AppTheme.NoActionBar">
+        </activity>
     </application>
 
 </manifest>

@@ -41,8 +41,10 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import se.grace.vivian.traits.Api;
+import se.grace.vivian.traits.Colors;
 import se.grace.vivian.traits.KeyStoring;
 import se.grace.vivian.traits.R;
+import se.grace.vivian.traits.Router;
 import se.grace.vivian.traits.SessionManager;
 import se.grace.vivian.traits.traits.Personality;
 import se.grace.vivian.traits.traits.PersonalityGridItem;
@@ -52,6 +54,9 @@ import se.grace.vivian.traits.traits.UserTypePart;
 
 public class PersonalitiesActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
+
+    public static final String TRAITS_PERSONALITY = "TRAITS_PERSONALITY";
+    public static final String TRAITS_USER_TRAITS = "TRAITS_USER_TRAITS";
 
     public SessionManager manager;
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
@@ -63,23 +68,19 @@ public class PersonalitiesActivity extends AppCompatActivity
     private NavigationView navigationView;
     final ArrayList<PersonalityGridItem> mPersonalityGridItems = new ArrayList<PersonalityGridItem>();
     private Personality[] mPersonalities = new Personality[16];
+    private Router mRouter = new Router();
+    private Colors mColors = new Colors();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+        final Context mContext = this;
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_personalities);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         manager = new SessionManager();
-
-        /*FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });*/
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -90,14 +91,62 @@ public class PersonalitiesActivity extends AppCompatActivity
         navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-
+        // Get User
         Intent intent = getIntent();
-        //String message = intent.getStringExtra(LoginActivity.TRAITS_USER);
-        mUser = intent.getParcelableExtra(LoginActivity.TRAITS_USER);  //getParcelableArrayExtra(LoginActivity.TRAITS_USER);
-        //mUser = Parcel.obtain() .copyOf(parcelables, User.class); //Arrays.copyOf(parcelables, parcelables.length, User.class);
+        mUser = intent.getParcelableExtra(LoginActivity.TRAITS_USER);
         Log.d(TAG, mUser.getName() + "");
-        Toast.makeText(this, mUser.getName(), Toast.LENGTH_LONG).show();
 
+        // Check if user object is available, otherwise get it
+        checkUser();
+
+        // Create PersonalityGridItem list
+        setupGridview(mContext);
+
+        // Get user traits [TODO later]
+        if(mUser.getUserTraits() != null && mUser.getUserTraits().size() > 0){
+            Log.d(TAG, "User Traits: " + mUser.getUserTraits().size());
+            Log.d(TAG, "User Traits: " + mUser.getUserTraits().get(0).getPersonalityType());
+        }
+    }
+
+    protected void checkUser(){
+        if(mUser.getUsername() == null) {
+            String status = manager.getPreferences(PersonalitiesActivity.this,"status");
+
+            //if (status.equals("1") && message.length() <= 16) {
+            if (status.equals("1")) {
+                //Log.d(TAG, "User already signed in!");
+                //Get user
+                String username = manager.getPreferences(PersonalitiesActivity.this, "username");
+                //Log.d(TAG, username);
+                String encryptedPassword = manager.getPreferences(PersonalitiesActivity.this, "password");
+                //Log.d(TAG, encryptedPassword);
+                String decryptedPassword = mKeyStoring.decryptString("TraitsPassword", encryptedPassword);
+                //Log.d(TAG, decryptedPassword);
+
+                try {
+                    //Log.d(TAG, "Get signed in user info");
+                    //postLogin(username, decryptedPassword);
+                    mApi.postLogin(username, decryptedPassword, PersonalitiesActivity.this);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            else{
+                //Log.d(TAG, "status: " + status);
+            }
+        }
+        else
+        {
+            Log.d(TAG, "Setting username in menu");
+            setMenuUsername(mUser.getUsername());
+            setMenuType(mUser.getUserTypeParts().get(0).getPersonalityType()); //Already sorted
+        }
+    }
+
+    protected void setupGridview(final Context context){
+        // Get User Type Parts
         if(mUser.getUserTypeParts() != null && mUser.getUserTypeParts().size() > 0){
 
             //Get User type parts
@@ -113,7 +162,7 @@ public class PersonalitiesActivity extends AppCompatActivity
                 PersonalityGridItem item = new PersonalityGridItem();
                 item.setType(mUserTypeParts.get(i).getPersonalityType());
                 item.setPercentage(Integer.parseInt(mUserTypeParts.get(i).getPercentage()));
-                item.setTypeColor(getColorByType(this, mUserTypeParts.get(i).getPersonalityType()));
+                item.setTypeColor(mColors.getColorByType(this, mUserTypeParts.get(i).getPersonalityType()));
                 mPersonalityGridItems.add(item);
             }
 
@@ -126,63 +175,33 @@ public class PersonalitiesActivity extends AppCompatActivity
                     e.printStackTrace();
                 }
             }
-
-            //Add types to GridView
-            GridView gridView = (GridView)findViewById(R.id.gridview);
-            final PersonalityAdapter personalityAdapter = new PersonalityAdapter(this, mPersonalityGridItems);
-            gridView.setAdapter(personalityAdapter);
-
-            gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView parent, View view, int position, long id) {
-                    PersonalityGridItem personalityGridItem = mPersonalityGridItems.get(position);
-                    Log.d(TAG, personalityGridItem.getType() + " was clicked!");
-                    personalityAdapter.notifyDataSetChanged();
-                }
-            });
         }
+    }
 
-        if(mUser.getUserTraits() != null && mUser.getUserTraits().size() > 0){
-            Log.d(TAG, "User Traits: " + mUser.getUserTraits().size());
-            Log.d(TAG, "User Traits: " + mUser.getUserTraits().get(0).getPersonalityType());
-        }
+    public void setGridViewAdapter(final Context context){
+        //Add types to GridView
+        GridView gridView = (GridView)findViewById(R.id.gridview);
+        final PersonalityAdapter personalityAdapter = new PersonalityAdapter(this, mPersonalityGridItems);
+        gridView.setAdapter(personalityAdapter);
 
-
-        if(mUser.getUsername() == null) {
-            String status = manager.getPreferences(PersonalitiesActivity.this,"status");
-
-            //if (status.equals("1") && message.length() <= 16) {
-            if (status.equals("1")) {
-                Log.d(TAG, "User already signed in!");
-                //Get user
-                String username = manager.getPreferences(PersonalitiesActivity.this, "username");
-                Log.d(TAG, username);
-                String encryptedPassword = manager.getPreferences(PersonalitiesActivity.this, "password");
-                Log.d(TAG, encryptedPassword);
-                String decryptedPassword = mKeyStoring.decryptString("TraitsPassword", encryptedPassword);
-                Log.d(TAG, decryptedPassword);
-
-                try {
-                    Log.d(TAG, "Get signed in user info");
-                    //postLogin(username, decryptedPassword);
-                    mApi.postLogin(username, decryptedPassword, PersonalitiesActivity.this);
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView parent, View view, int position, long id) {
+                PersonalityGridItem personalityGridItem = mPersonalityGridItems.get(position);
+                Log.d(TAG, personalityGridItem.getType() + " was clicked!");
+                personalityAdapter.notifyDataSetChanged();
+                mRouter.GoToTraitsActivity(context, getPersonalityByType(personalityGridItem.getType()), mUser.getUserTraits());
             }
-            else{
-                Log.d(TAG, "status: " + status);
+        });
+    }
+
+    public PersonalityGridItem getPersonalityByType(String type){
+        for(int i = 0; i < mPersonalityGridItems.size(); i++){
+            if(mPersonalityGridItems.get(i).getType().equals(type)){
+                return mPersonalityGridItems.get(i);
             }
         }
-        else
-        {
-            Log.d(TAG, "Setting username in menu");
-            setMenuUsername(mUser.getUsername());
-            setMenuType(mUser.getUserTypeParts().get(0).getPersonalityType()); //Already sorted
-        }
-
-
+        return null;
     }
 
     protected okhttp3.Call get(String url, Callback callback) throws IOException {
@@ -190,7 +209,7 @@ public class PersonalitiesActivity extends AppCompatActivity
                 .url(url)
                 .build();
 
-        okhttp3.Call call = client.newCall(request); //.execute();
+        okhttp3.Call call = client.newCall(request);
         call.enqueue(callback);
         return call;
     }
@@ -225,7 +244,7 @@ public class PersonalitiesActivity extends AppCompatActivity
                             p.setFemaleFrequency(jsonobject.getString("femalefrequency"));
                             p.setDescription(jsonobject.getString("description"));
                             p.setTypeFull(jsonobject.getString("typefull"));
-                            p.setTraits(parseUserTraits(jsonobject));
+                            //p.setTraits(parseUserTraits(jsonobject));
                             mPersonalities[i] = p;
                         }
 
@@ -236,37 +255,29 @@ public class PersonalitiesActivity extends AppCompatActivity
                                 PersonalityGridItem pgi = new PersonalityGridItem();
                                 String pType = mPersonalities[i].getType();
                                 if(!typeExistsInPersonalityGridList(pType)){
-                                    //Log.d(TAG, "Add: " + pType);
                                     pgi.setType(pType);
                                     pgi.setPercentage(0);
-                                    pgi.setTypeColor(getColorByType(context, pType));
+                                    pgi.setTypeColor(mColors.getColorByType(context, pType));
                                     mPersonalityGridItems.add(pgi);
-                                }
-                                else{
-                                    //Log.d(TAG, "Not add: " + pType);
                                 }
                             }
                         }
                         Log.d(TAG, "Personality grid items after add: " + mPersonalityGridItems.size());
-
-
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
 
                     //Run in main thread
-                    /*runOnUiThread(new Runnable() {
+                    runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            GoToPersonalitiesActivity(responseStr);
-
+                            setGridViewAdapter(context);
                         }
-                    });*/
+                    });
                 }
                 else {
                     // Request not successful
                     Log.d(TAG, "Request not successful: "  +response.code() +" : "+ response.message());
-
                 }
             }
         });
@@ -276,7 +287,6 @@ public class PersonalitiesActivity extends AppCompatActivity
         Boolean typeExists = false;
         for(int j = 0; j<mPersonalityGridItems.size(); j++){
             String gType = mPersonalityGridItems.get(j).getType();
-            Log.d(TAG, type + "==" + gType);
             if(type.trim().equals(gType.trim())){
                 return true;
             }
@@ -326,7 +336,7 @@ public class PersonalitiesActivity extends AppCompatActivity
         View header=navigationView.getHeaderView(0);
         LinearLayout headerLayout = (LinearLayout) header.findViewById(R.id.navHeadLayout);
         //headerLayout.setBackgroundColor(ContextCompat.getColor(this, android.R.color.black));
-        headerLayout.setBackgroundColor(getColorByType(this, type));
+        headerLayout.setBackgroundColor(mColors.getColorByType(this, type));
         TextView navTypeTextView = (TextView)header.findViewById(R.id.navTypeTextView);
         if(navTypeTextView != null)
         {
@@ -334,57 +344,57 @@ public class PersonalitiesActivity extends AppCompatActivity
         }
     }
 
-    protected int getColorByType(Context context, String type){
-        if(type.equals("INTJ")){
-            return ContextCompat.getColor(context, R.color.colorIntj);
-        }
-        else if(type.equals("ESTJ")){
-            return ContextCompat.getColor(context, R.color.colorEstj);
-        }
-        else if(type.equals("ESFJ")){
-            return ContextCompat.getColor(context, R.color.colorEsfj);
-        }
-        else if(type.equals("ISTJ")){
-            return ContextCompat.getColor(context, R.color.colorIstj);
-        }
-        else if(type.equals("ISFJ")){
-            return ContextCompat.getColor(context, R.color.colorIsfj);
-        }
-        else if(type.equals("ESTP")){
-            return ContextCompat.getColor(context, R.color.colorEstp);
-        }
-        else if(type.equals("ESFP")){
-            return ContextCompat.getColor(context, R.color.colorEsfp);
-        }
-        else if(type.equals("ISFP")){
-            return ContextCompat.getColor(context, R.color.colorIsfp);
-        }
-        else if(type.equals("ISTP")){
-            return ContextCompat.getColor(context, R.color.colorIstp);
-        }
-        else if(type.equals("ENTJ")){
-            return ContextCompat.getColor(context, R.color.colorEntj);
-        }
-        else if(type.equals("ENTP")){
-            return ContextCompat.getColor(context, R.color.colorEntp);
-        }
-        else if(type.equals("INTP")){
-            return ContextCompat.getColor(context, R.color.colorIntp);
-        }
-        else if(type.equals("INFJ")){
-            return ContextCompat.getColor(context, R.color.colorInfj);
-        }
-        else if(type.equals("ENFP")){
-            return ContextCompat.getColor(context, R.color.colorEnfp);
-        }
-        else if(type.equals("INFP")){
-            return ContextCompat.getColor(context, R.color.colorInfp);
-        }
-        else if(type.equals("ENFJ")){
-            return ContextCompat.getColor(context, R.color.colorEnfj);
-        }
-        return ContextCompat.getColor(context, R.color.colorIntj);
-    }
+//    protected int getColorByType(Context context, String type){
+//        if(type.equals("INTJ")){
+//            return ContextCompat.getColor(context, R.color.colorIntj);
+//        }
+//        else if(type.equals("ESTJ")){
+//            return ContextCompat.getColor(context, R.color.colorEstj);
+//        }
+//        else if(type.equals("ESFJ")){
+//            return ContextCompat.getColor(context, R.color.colorEsfj);
+//        }
+//        else if(type.equals("ISTJ")){
+//            return ContextCompat.getColor(context, R.color.colorIstj);
+//        }
+//        else if(type.equals("ISFJ")){
+//            return ContextCompat.getColor(context, R.color.colorIsfj);
+//        }
+//        else if(type.equals("ESTP")){
+//            return ContextCompat.getColor(context, R.color.colorEstp);
+//        }
+//        else if(type.equals("ESFP")){
+//            return ContextCompat.getColor(context, R.color.colorEsfp);
+//        }
+//        else if(type.equals("ISFP")){
+//            return ContextCompat.getColor(context, R.color.colorIsfp);
+//        }
+//        else if(type.equals("ISTP")){
+//            return ContextCompat.getColor(context, R.color.colorIstp);
+//        }
+//        else if(type.equals("ENTJ")){
+//            return ContextCompat.getColor(context, R.color.colorEntj);
+//        }
+//        else if(type.equals("ENTP")){
+//            return ContextCompat.getColor(context, R.color.colorEntp);
+//        }
+//        else if(type.equals("INTP")){
+//            return ContextCompat.getColor(context, R.color.colorIntp);
+//        }
+//        else if(type.equals("INFJ")){
+//            return ContextCompat.getColor(context, R.color.colorInfj);
+//        }
+//        else if(type.equals("ENFP")){
+//            return ContextCompat.getColor(context, R.color.colorEnfp);
+//        }
+//        else if(type.equals("INFP")){
+//            return ContextCompat.getColor(context, R.color.colorInfp);
+//        }
+//        else if(type.equals("ENFJ")){
+//            return ContextCompat.getColor(context, R.color.colorEnfj);
+//        }
+//        return ContextCompat.getColor(context, R.color.colorIntj);
+//    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
