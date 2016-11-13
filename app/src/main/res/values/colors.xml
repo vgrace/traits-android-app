@@ -20,4 +20,6 @@
     <color name="colorEnfp">#3e3139</color>
     <color name="colorInfp">#5e3345</color>
     <color name="colorEnfj">#262426</color>
+    <!---->
+    <color name="lightText">#FFFFFF</color>
 </resources>

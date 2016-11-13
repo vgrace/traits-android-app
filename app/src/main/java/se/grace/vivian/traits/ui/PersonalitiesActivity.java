@@ -17,19 +17,36 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.GridView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 import se.grace.vivian.traits.Api;
 import se.grace.vivian.traits.KeyStoring;
 import se.grace.vivian.traits.R;
 import se.grace.vivian.traits.SessionManager;
+import se.grace.vivian.traits.traits.Personality;
+import se.grace.vivian.traits.traits.PersonalityGridItem;
+import se.grace.vivian.traits.traits.Trait;
 import se.grace.vivian.traits.traits.User;
 import se.grace.vivian.traits.traits.UserTypePart;
 
@@ -37,11 +54,15 @@ public class PersonalitiesActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
     public SessionManager manager;
-    public static final String TAG = LoginActivity.class.getSimpleName();
+    public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+    private final OkHttpClient client = new OkHttpClient();
+    public static final String TAG = PersonalitiesActivity.class.getSimpleName();
     private Api mApi = new Api();
     private KeyStoring mKeyStoring = new KeyStoring();
     private User mUser;
     private NavigationView navigationView;
+    final ArrayList<PersonalityGridItem> mPersonalityGridItems = new ArrayList<PersonalityGridItem>();
+    private Personality[] mPersonalities = new Personality[16];
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -78,12 +99,47 @@ public class PersonalitiesActivity extends AppCompatActivity
         Toast.makeText(this, mUser.getName(), Toast.LENGTH_LONG).show();
 
         if(mUser.getUserTypeParts() != null && mUser.getUserTypeParts().size() > 0){
-            Log.d(TAG, "User Type parts: " + mUser.getUserTypeParts().size());
-            Log.d(TAG, "User Type parts: " + mUser.getUserTypeParts().get(0).getPersonalityType());
+
+            //Get User type parts
             Collections.sort(mUser.getUserTypeParts(), new UserTypePart());
             Log.d(TAG, "User Type parts: " + "After sort");
             Log.d(TAG, "User Type parts: " + mUser.getUserTypeParts().size());
             Log.d(TAG, "User Type parts: " + mUser.getUserTypeParts().get(0).getPersonalityType());
+
+            // Get user type parts
+            ArrayList<UserTypePart> mUserTypeParts = mUser.getUserTypeParts();
+            for(int i = 0; i< mUserTypeParts.size(); i++)
+            {
+                PersonalityGridItem item = new PersonalityGridItem();
+                item.setType(mUserTypeParts.get(i).getPersonalityType());
+                item.setPercentage(Integer.parseInt(mUserTypeParts.get(i).getPercentage()));
+                item.setTypeColor(getColorByType(this, mUserTypeParts.get(i).getPersonalityType()));
+                mPersonalityGridItems.add(item);
+            }
+
+            //Get att personalities
+            if(mPersonalityGridItems.size() < 16) {
+                try {
+                    getPersonalities(this);
+                    Log.d(TAG, mPersonalities.length + "");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            //Add types to GridView
+            GridView gridView = (GridView)findViewById(R.id.gridview);
+            final PersonalityAdapter personalityAdapter = new PersonalityAdapter(this, mPersonalityGridItems);
+            gridView.setAdapter(personalityAdapter);
+
+            gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView parent, View view, int position, long id) {
+                    PersonalityGridItem personalityGridItem = mPersonalityGridItems.get(position);
+                    Log.d(TAG, personalityGridItem.getType() + " was clicked!");
+                    personalityAdapter.notifyDataSetChanged();
+                }
+            });
         }
 
         if(mUser.getUserTraits() != null && mUser.getUserTraits().size() > 0){
@@ -125,8 +181,120 @@ public class PersonalitiesActivity extends AppCompatActivity
             setMenuUsername(mUser.getUsername());
             setMenuType(mUser.getUserTypeParts().get(0).getPersonalityType()); //Already sorted
         }
+
+
     }
 
+    protected okhttp3.Call get(String url, Callback callback) throws IOException {
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+
+        okhttp3.Call call = client.newCall(request); //.execute();
+        call.enqueue(callback);
+        return call;
+    }
+
+    public void getPersonalities(final Context context) throws Exception {
+        Log.d(TAG, "In Get Personalities");
+        String url = "http://traits-app-api.herokuapp.com/api/personality";
+        get(url, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                // Something went wrong
+                if(e.getMessage() != null)
+                    Log.d(TAG, e.getMessage());
+                else
+                    Log.d(TAG, "Failed to call GET");
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    final String responseStr = response.body().string();
+                    Log.d(TAG, responseStr);
+                    try {
+
+                        JSONArray jsonarray = new JSONArray(responseStr);
+                        for (int i = 0; i < jsonarray.length(); i++) {
+                            JSONObject jsonobject = jsonarray.getJSONObject(i);
+                            Personality p = new Personality();
+                            p.setType(jsonobject.getString("type"));
+                            p.setTotalFrequency(jsonobject.getString("totalfrequency"));
+                            p.setMaleFrequency(jsonobject.getString("malefrequency"));
+                            p.setFemaleFrequency(jsonobject.getString("femalefrequency"));
+                            p.setDescription(jsonobject.getString("description"));
+                            p.setTypeFull(jsonobject.getString("typefull"));
+                            p.setTraits(parseUserTraits(jsonobject));
+                            mPersonalities[i] = p;
+                        }
+
+                        // Update grid with missing personalities
+                        if(mPersonalityGridItems.size() < 16){
+
+                            for(int i = 0; i<mPersonalities.length; i++){
+                                PersonalityGridItem pgi = new PersonalityGridItem();
+                                String pType = mPersonalities[i].getType();
+                                if(!typeExistsInPersonalityGridList(pType)){
+                                    //Log.d(TAG, "Add: " + pType);
+                                    pgi.setType(pType);
+                                    pgi.setPercentage(0);
+                                    pgi.setTypeColor(getColorByType(context, pType));
+                                    mPersonalityGridItems.add(pgi);
+                                }
+                                else{
+                                    //Log.d(TAG, "Not add: " + pType);
+                                }
+                            }
+                        }
+                        Log.d(TAG, "Personality grid items after add: " + mPersonalityGridItems.size());
+
+
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+                    //Run in main thread
+                    /*runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            GoToPersonalitiesActivity(responseStr);
+
+                        }
+                    });*/
+                }
+                else {
+                    // Request not successful
+                    Log.d(TAG, "Request not successful: "  +response.code() +" : "+ response.message());
+
+                }
+            }
+        });
+    }
+
+    private boolean typeExistsInPersonalityGridList(String type){
+        Boolean typeExists = false;
+        for(int j = 0; j<mPersonalityGridItems.size(); j++){
+            String gType = mPersonalityGridItems.get(j).getType();
+            Log.d(TAG, type + "==" + gType);
+            if(type.trim().equals(gType.trim())){
+                return true;
+            }
+        }
+        return typeExists;
+    }
+
+    private ArrayList<Trait> parseUserTraits(JSONObject personalityJson) throws JSONException{
+        JSONArray traitsJson = personalityJson.getJSONArray("traits");
+        ArrayList<Trait> traits = new ArrayList<Trait>();
+        for(int i = 0; i<traitsJson.length(); i++){
+            Trait t = new Trait();
+            JSONObject jsonTrait = traitsJson.getJSONObject(i);
+            t.setTrait(jsonTrait.getString("trait"));
+            t.setWeight(jsonTrait.getInt("weight"));
+        }
+        return traits;
+    }
 
     @Override
     public void onBackPressed() {
@@ -145,8 +313,7 @@ public class PersonalitiesActivity extends AppCompatActivity
 
         return true;
     }
-    public void setMenuUsername(String username)
-    {
+    public void setMenuUsername(String username){
         View header=navigationView.getHeaderView(0);
         TextView navUsernameTextView = (TextView)header.findViewById(R.id.navTextView);
         if(navUsernameTextView != null)
@@ -155,8 +322,7 @@ public class PersonalitiesActivity extends AppCompatActivity
         }
     }
 
-    public void setMenuType(String type)
-    {
+    public void setMenuType(String type){
         View header=navigationView.getHeaderView(0);
         LinearLayout headerLayout = (LinearLayout) header.findViewById(R.id.navHeadLayout);
         //headerLayout.setBackgroundColor(ContextCompat.getColor(this, android.R.color.black));
