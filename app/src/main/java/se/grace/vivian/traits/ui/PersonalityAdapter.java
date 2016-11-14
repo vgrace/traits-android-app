@@ -58,7 +58,15 @@ public class PersonalityAdapter extends BaseAdapter {
         final TextView typeTextView = (TextView) convertView.findViewById(R.id.personality_type);
         final TextView percTextView = (TextView) convertView.findViewById(R.id.personality_perc);
         typeTextView.setText(typePart.getType());
+        int perc = typePart.getPercentage();
         percTextView.setText(typePart.getPercentage() + " %");
+        if(perc > 0){
+            percTextView.setVisibility(View.VISIBLE);
+
+        }
+        else{
+            percTextView.setVisibility(View.INVISIBLE);
+        }
         itemLayout.setBackgroundColor(typePart.getTypeColor());
 
         return convertView;

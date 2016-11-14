@@ -102,6 +102,8 @@ public class PersonalitiesActivity extends AppCompatActivity
         // Create PersonalityGridItem list
         setupGridview(mContext);
 
+
+
         // Get user traits [TODO later]
         if(mUser.getUserTraits() != null && mUser.getUserTraits().size() > 0){
             Log.d(TAG, "User Traits: " + mUser.getUserTraits().size());
@@ -139,9 +141,7 @@ public class PersonalitiesActivity extends AppCompatActivity
         }
         else
         {
-            Log.d(TAG, "Setting username in menu");
-            setMenuUsername(mUser.getUsername());
-            setMenuType(mUser.getUserTypeParts().get(0).getPersonalityType()); //Already sorted
+
         }
     }
 
@@ -178,6 +178,7 @@ public class PersonalitiesActivity extends AppCompatActivity
         }
     }
 
+    //public void setup
     public void setGridViewAdapter(final Context context){
         //Add types to GridView
         GridView gridView = (GridView)findViewById(R.id.gridview);
@@ -272,6 +273,10 @@ public class PersonalitiesActivity extends AppCompatActivity
                         @Override
                         public void run() {
                             setGridViewAdapter(context);
+                            // Setup menu drawer
+                            Log.d(TAG, "Setting username in menu");
+                            setMenuUsername(mUser.getUsername());
+                            setMenuType(mPersonalityGridItems.get(0).getType()); //Already sorted
                         }
                     });
                 }
@@ -343,58 +348,6 @@ public class PersonalitiesActivity extends AppCompatActivity
             navTypeTextView.setText(type);
         }
     }
-
-//    protected int getColorByType(Context context, String type){
-//        if(type.equals("INTJ")){
-//            return ContextCompat.getColor(context, R.color.colorIntj);
-//        }
-//        else if(type.equals("ESTJ")){
-//            return ContextCompat.getColor(context, R.color.colorEstj);
-//        }
-//        else if(type.equals("ESFJ")){
-//            return ContextCompat.getColor(context, R.color.colorEsfj);
-//        }
-//        else if(type.equals("ISTJ")){
-//            return ContextCompat.getColor(context, R.color.colorIstj);
-//        }
-//        else if(type.equals("ISFJ")){
-//            return ContextCompat.getColor(context, R.color.colorIsfj);
-//        }
-//        else if(type.equals("ESTP")){
-//            return ContextCompat.getColor(context, R.color.colorEstp);
-//        }
-//        else if(type.equals("ESFP")){
-//            return ContextCompat.getColor(context, R.color.colorEsfp);
-//        }
-//        else if(type.equals("ISFP")){
-//            return ContextCompat.getColor(context, R.color.colorIsfp);
-//        }
-//        else if(type.equals("ISTP")){
-//            return ContextCompat.getColor(context, R.color.colorIstp);
-//        }
-//        else if(type.equals("ENTJ")){
-//            return ContextCompat.getColor(context, R.color.colorEntj);
-//        }
-//        else if(type.equals("ENTP")){
-//            return ContextCompat.getColor(context, R.color.colorEntp);
-//        }
-//        else if(type.equals("INTP")){
-//            return ContextCompat.getColor(context, R.color.colorIntp);
-//        }
-//        else if(type.equals("INFJ")){
-//            return ContextCompat.getColor(context, R.color.colorInfj);
-//        }
-//        else if(type.equals("ENFP")){
-//            return ContextCompat.getColor(context, R.color.colorEnfp);
-//        }
-//        else if(type.equals("INFP")){
-//            return ContextCompat.getColor(context, R.color.colorInfp);
-//        }
-//        else if(type.equals("ENFJ")){
-//            return ContextCompat.getColor(context, R.color.colorEnfj);
-//        }
-//        return ContextCompat.getColor(context, R.color.colorIntj);
-//    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
