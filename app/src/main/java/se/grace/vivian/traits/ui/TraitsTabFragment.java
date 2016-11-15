@@ -7,8 +7,13 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.GridView;
+import android.widget.TextView;
+
+import java.util.ArrayList;
 
 import se.grace.vivian.traits.R;
+import se.grace.vivian.traits.traits.Trait;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -27,6 +32,8 @@ public class TraitsTabFragment extends Fragment {
     // TODO: Rename and change types of parameters
     private String mParam1;
     private String mParam2;
+
+    ArrayList<Trait> mTraitList = new ArrayList<Trait>();
 
     private OnFragmentInteractionListener mListener;
 
@@ -68,10 +75,26 @@ public class TraitsTabFragment extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+
+        View v = inflater.inflate(R.layout.fragment_traits_tab, container, false);
+
+        TextView scoresTextView = (TextView) v.findViewById(R.id.traitsTabScoreValue);
+        scoresTextView.setText(TraitsActivity.getPersonalityScore()  + " %");
+
+        // Test
+        Trait t = new Trait();
+        t.setTrait("Handsome");
+        mTraitList.add(t);
+
+        //Setup traits grid
+        GridView traitsGridView = (GridView) v.findViewById(R.id.traitsGrid);
+        final TraitsAdapter traitsAdapter = new TraitsAdapter(v.getContext(), TraitsActivity.getTraitsList());
+        traitsGridView.setAdapter(traitsAdapter);
+
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_traits_tab, container, false);
+        //return inflater.inflate(R.layout.fragment_traits_tab, container, false);
+        return v;
     }
 
     // TODO: Rename method, update argument and hook method into UI event

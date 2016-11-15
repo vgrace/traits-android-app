@@ -3,6 +3,7 @@
     <color name="colorPrimary">#3f3e3f</color>
     <color name="colorPrimaryDark">#262426</color>
     <color name="colorAccent">#FFFFFF</color>
+    <color name="buttonDefault">#a9a9a9</color>
     <!--traits colors-->
     <color name="colorEstj">#641511</color>
     <color name="colorEsfj">#bc4b3d</color>

@@ -1,7 +1,10 @@
 package se.grace.vivian.traits.ui;
 
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.ColorDrawable;
+import android.os.Parcelable;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.design.widget.TabLayout;
@@ -23,15 +26,20 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
+import android.widget.GridView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 
 import se.grace.vivian.traits.Colors;
 import se.grace.vivian.traits.R;
 import se.grace.vivian.traits.traits.Personality;
 import se.grace.vivian.traits.traits.PersonalityGridItem;
+import se.grace.vivian.traits.traits.Trait;
 import se.grace.vivian.traits.traits.UserTraits;
 
 public class TraitsActivity extends AppCompatActivity {
@@ -55,6 +63,9 @@ public class TraitsActivity extends AppCompatActivity {
     private ViewPager mViewPager;
     private PersonalityGridItem mPersonality;
     private String[] mUserTraits;
+    static ArrayList<Trait> mTraitList = new ArrayList<Trait>();
+    private static int personalityScore;
+    private static int personalityColor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,7 +76,10 @@ public class TraitsActivity extends AppCompatActivity {
         Intent intent = getIntent();
         mPersonality = intent.getParcelableExtra(PersonalitiesActivity.TRAITS_PERSONALITY);
         Log.d(TAG, mPersonality.getType() + "");
+        Log.d(TAG, mPersonality.getPercentage() + "");
         String selectedPersonality = mPersonality.getType();
+        personalityScore = mPersonality.getPercentage();
+        personalityColor = mPersonality.getTypeColor();
 
         //Get User Traits
         ArrayList<UserTraits> mAllUserTraits = intent.getParcelableArrayListExtra(PersonalitiesActivity.TRAITS_USER_TRAITS);
@@ -83,6 +97,10 @@ public class TraitsActivity extends AppCompatActivity {
         // Loop user selected personality traits
         for(int j = 0; j<mUserTraits.length; j++){
             Log.d(TAG, mUserTraits[j] + "");
+            Trait t = new Trait();
+            t.setTrait(mUserTraits[j]);
+            t.setUser(true);
+            mTraitList.add(t);
         }
 
         // Toolbar
@@ -106,7 +124,6 @@ public class TraitsActivity extends AppCompatActivity {
         // primary sections of the activity.
         mViewPager = (ViewPager) findViewById(R.id.container);
         //mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
-
 
         final PagerAdapter adapter = new TabPagerAdapter
                 (getSupportFragmentManager(),
@@ -135,7 +152,17 @@ public class TraitsActivity extends AppCompatActivity {
         });
     }
 
+    public static ArrayList<Trait> getTraitsList(){
+        return mTraitList;
+    }
 
+    public static int getPersonalityScore(){
+        return personalityScore;
+    }
+
+    public static int getPersonalityColor(){
+        return personalityColor;
+    }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -167,6 +194,8 @@ public class TraitsActivity extends AppCompatActivity {
          * fragment.
          */
         private static final String ARG_SECTION_NUMBER = "section_number";
+        private static final String TRAITS_LIST = "TRAITS_LIST";
+        private static final String PERSONALITY_SCORE = "PERSONALITY_SCORE";
 
         public PlaceholderFragment() {
         }
@@ -184,14 +213,21 @@ public class TraitsActivity extends AppCompatActivity {
         }
 
         @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                                 Bundle savedInstanceState) {
+        public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_traits, container, false);
             TextView textView = (TextView) rootView.findViewById(R.id.section_label);
             textView.setText(getString(R.string.section_format, getArguments().getInt(ARG_SECTION_NUMBER)));
+
+            //and here i get the reference of gridview from my_fragment.xml and set the adapter
+
+
             return rootView;
         }
+
+
     }
+
+
 
     /**
      * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
