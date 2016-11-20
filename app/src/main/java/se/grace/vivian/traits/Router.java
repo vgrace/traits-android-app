@@ -32,12 +32,12 @@ public class Router {
 
     }
 
-    public void GoToTraitsActivity(Context context, PersonalityGridItem personalityGridItem, ArrayList<UserTraits> userTraits){
+    public void GoToTraitsActivity(Context context, PersonalityGridItem personalityGridItem){
         Log.d(TAG, personalityGridItem.getType());
         //Go to traits activity
         Intent intent = new Intent(context, TraitsActivity.class);
         intent.putExtra(TRAITS_PERSONALITY, personalityGridItem);
-        intent.putExtra(TRAITS_USER_TRAITS, userTraits);
+        //intent.putExtra(TRAITS_USER_TRAITS, userTraits);
         context.startActivity(intent);
     }
 

@@ -31,11 +31,33 @@ public class Api {
     public static final String TRAITS_USER = "TRAITS_USER";
     private Router mRouter = new Router();
     private User mUser;
-    protected okhttp3.Call post(String url, String json, Callback callback) {
+
+    public okhttp3.Call get(String url, Callback callback) throws IOException {
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+
+        okhttp3.Call call = client.newCall(request);
+        call.enqueue(callback);
+        return call;
+    }
+
+    private okhttp3.Call post(String url, String json, Callback callback) {
         RequestBody body = RequestBody.create(JSON, json);
         Request request = new Request.Builder()
                 .url(url)
                 .post(body)
+                .build();
+        okhttp3.Call call = client.newCall(request);
+        call.enqueue(callback);
+        return call;
+    }
+
+    public okhttp3.Call put(String url, String json, Callback callback) {
+        RequestBody body = RequestBody.create(JSON, json);
+        Request request = new Request.Builder()
+                .url(url)
+                .put(body)
                 .build();
         okhttp3.Call call = client.newCall(request);
         call.enqueue(callback);
@@ -109,8 +131,8 @@ public class Api {
         Log.d(TAG, "email: " + userJson.getString("email"));
         user.setUsername(userJson.getString("username"));
         Log.d(TAG, "Username: " + userJson.getString("username"));
-        user.setUserTypeParts(parseUserTypeParts(jsonData));
-        user.setUserTraits(parseUserTraits(jsonData));
+        //user.setUserTypeParts(parseUserTypeParts(jsonData));
+        //user.setUserTraits(parseUserTraits(jsonData));
         return user;
     }
 

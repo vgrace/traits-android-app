@@ -29,6 +29,7 @@ public class PersonalityAdapter extends BaseAdapter {
         this.mTypes = types;
 
     }
+
     @Override
     public int getCount() {
         return mTypes.size();

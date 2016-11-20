@@ -29,17 +29,27 @@ import android.view.ViewGroup;
 import android.widget.GridView;
 import android.widget.TextView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Response;
+import se.grace.vivian.traits.Api;
 import se.grace.vivian.traits.Colors;
 import se.grace.vivian.traits.R;
 import se.grace.vivian.traits.traits.Personality;
 import se.grace.vivian.traits.traits.PersonalityGridItem;
 import se.grace.vivian.traits.traits.Trait;
+import se.grace.vivian.traits.traits.User;
 import se.grace.vivian.traits.traits.UserTraits;
 
 public class TraitsActivity extends AppCompatActivity {
@@ -61,16 +71,25 @@ public class TraitsActivity extends AppCompatActivity {
      * The {@link ViewPager} that will host the section contents.
      */
     private ViewPager mViewPager;
-    private PersonalityGridItem mPersonality;
-    private String[] mUserTraits;
-    static ArrayList<Trait> mTraitList = new ArrayList<Trait>();
+    private static PersonalityGridItem mPersonality;
+    //private static String[] mUserTraits;
+    private static UserTraits userTraits = new UserTraits();
+    static ArrayList<Trait> mUserTraitList = new ArrayList<Trait>();
+    static ArrayList<Trait> mPersonalityTraitList = new ArrayList<Trait>();
     private static int personalityScore;
     private static int personalityColor;
+    private static Api mApi = new Api();
+    private static User mUser;
+    //private static Context mContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, "TRAITS ACTIVITY CREATED");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_traits);
+        //Context mContext = this;
+        // Get User
+        mUser = PersonalitiesActivity.getUser();
 
         // Get Personality
         Intent intent = getIntent();
@@ -82,26 +101,21 @@ public class TraitsActivity extends AppCompatActivity {
         personalityColor = mPersonality.getTypeColor();
 
         //Get User Traits
-        ArrayList<UserTraits> mAllUserTraits = intent.getParcelableArrayListExtra(PersonalitiesActivity.TRAITS_USER_TRAITS);
-
-        // Find selected user personality traits
-        for(int i = 0; i<mAllUserTraits.size(); i++){
-            UserTraits ut = mAllUserTraits.get(i);
-            if(ut.getPersonalityType().equals(selectedPersonality)){
-                mUserTraits = ut.getTraits();
-                break;
-            }
+        try {
+            getUserTraits(this);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+        //ArrayList<UserTraits> mAllUserTraits = intent.getParcelableArrayListExtra(PersonalitiesActivity.TRAITS_USER_TRAITS);
 
-        Log.d(TAG, selectedPersonality + " user traits: " + mUserTraits.length);
-        // Loop user selected personality traits
-        for(int j = 0; j<mUserTraits.length; j++){
-            Log.d(TAG, mUserTraits[j] + "");
-            Trait t = new Trait();
-            t.setTrait(mUserTraits[j]);
-            t.setUser(true);
-            mTraitList.add(t);
-        }
+//        // Find selected user personality traits
+//        for(int i = 0; i<mAllUserTraits.size(); i++){
+//            UserTraits ut = mAllUserTraits.get(i);
+//            if(ut.getPersonalityType().equals(selectedPersonality)){
+//                mUserTraits = ut.getTraits();
+//                break;
+//            }
+//        }
 
         // Toolbar
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -152,8 +166,83 @@ public class TraitsActivity extends AppCompatActivity {
         });
     }
 
-    public static ArrayList<Trait> getTraitsList(){
-        return mTraitList;
+    // Get User Type Parts
+    public void getUserTraits(final Context context) throws Exception {
+        Log.d(TAG, "In Get User Type Parts");
+        String url = "http://traits-app-api.herokuapp.com/api/usertraits/" + mUser.getUsername() + "/" + mPersonality.getType() + "";
+        mApi.get(url, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                // Something went wrong
+                if(e.getMessage() != null)
+                    Log.d(TAG, e.getMessage());
+                else
+                    Log.d(TAG, "Failed to call GET");
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    final String responseStr = response.body().string();
+                    Log.d(TAG, responseStr);
+                    try {
+                        JSONObject jsonObject = new JSONObject(responseStr);
+                        JSONArray jsonarray = jsonObject.getJSONArray("traits");
+                        for (int i = 0; i < jsonarray.length(); i++) {
+                            Trait t = new Trait();
+                            String userT = jsonarray.getString(i);
+                            t.setTrait(userT);
+                            t.setType(jsonObject.getString("personalitytype"));
+                            t.setUser(true);
+                            mUserTraitList.add(t);
+                        }
+                    }catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+                    //Run in main thread
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                        }
+                    });
+                }
+                else {
+                    // Request not successful
+                    Log.d(TAG, "Request not successful: "  +response.code() +" : "+ response.message());
+                }
+            }
+        });
+    }
+
+    public static PersonalityGridItem getPersonality(){
+        return mPersonality;
+    }
+    public static void clearTraitsList(){
+        mUserTraitList = new ArrayList<Trait>();
+    }
+    public static void updateUserTraitsList(Trait userTrait){
+        mUserTraitList.add(userTrait);
+    }
+    public static ArrayList<Trait> getUserTraitsList(){
+        // Loop user selected personality traits
+
+        //        for(int j = 0; j<mUserTraits.length; j++){
+        //            Log.d(TAG, mUserTraits[j] + "");
+        //            Trait t = new Trait();
+        //            t.setType(mPersonality.getType());
+        //            t.setTrait(mUserTraits[j]);
+        //            t.setUser(true);
+        ////            if(mTraitList.indexOf(t) != -1){
+        ////                // Set to user trait true
+        ////                Log.d(TAG, "This is a user trait");
+        ////                Trait pt = mTraitList.get(0);
+        ////                pt.setUser(true);
+        ////            }
+        //            mUserTraitList.add(t);
+        //        }
+
+        return mUserTraitList;
     }
 
     public static int getPersonalityScore(){
@@ -163,6 +252,57 @@ public class TraitsActivity extends AppCompatActivity {
     public static int getPersonalityColor(){
         return personalityColor;
     }
+
+//    public void getPersonalityTraits(String type) throws Exception {
+//        String url = "http://traits-app-api.herokuapp.com/api/trait/" + type;
+//        mApi.get(url, new Callback() {
+//            @Override
+//            public void onFailure(Call call, IOException e) {
+//                // Something went wrong
+//                if(e.getMessage() != null)
+//                    Log.d(TAG, e.getMessage());
+//                else
+//                    Log.d(TAG, "Failed to call GET");
+//            }
+//
+//            @Override
+//            public void onResponse(Call call, Response response) throws IOException {
+//                if (response.isSuccessful()) {
+//                    final String responseStr = response.body().string();
+//                    Log.d(TAG, responseStr);
+//                    try {
+//                        // Personality traits
+//                        JSONArray jsonarray = new JSONArray(responseStr);
+//                        for (int i = 0; i < jsonarray.length(); i++) {
+//                            JSONObject jsonobject = jsonarray.getJSONObject(i);
+//                            Trait t = new Trait();
+//                            t.setType(jsonobject.getString("type"));
+//                            t.setTrait(jsonobject.getString("trait"));
+//                            t.setWeight(jsonobject.getInt("weight"));
+//                            t.setUser(false);
+//                            mPersonalityTraitList.add(t);
+//                        }
+//
+//                    } catch (JSONException e) {
+//                        e.printStackTrace();
+//                    }
+//                    //Run in main thread
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            Log.d(TAG, "setupTraitsGrid");
+//                            TraitsTabFragment.setupTraitsGrid(mPersonalityTraitList);
+//                        }
+//                    });
+//                }
+//                else {
+//                    // Request not successful
+//                    Log.d(TAG, "Request not successful: "  +response.code() +" : "+ response.message());
+//                }
+//            }
+//        });
+//    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -217,17 +357,11 @@ public class TraitsActivity extends AppCompatActivity {
             View rootView = inflater.inflate(R.layout.fragment_traits, container, false);
             TextView textView = (TextView) rootView.findViewById(R.id.section_label);
             textView.setText(getString(R.string.section_format, getArguments().getInt(ARG_SECTION_NUMBER)));
-
-            //and here i get the reference of gridview from my_fragment.xml and set the adapter
-
-
             return rootView;
         }
 
 
     }
-
-
 
     /**
      * A {@link FragmentPagerAdapter} that returns a fragment corresponding to

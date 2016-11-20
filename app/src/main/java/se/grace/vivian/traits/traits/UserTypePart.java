@@ -12,10 +12,6 @@ import static java.lang.Integer.parseInt;
  */
 public class UserTypePart implements Parcelable, Comparator<UserTypePart> {
 
-    //"personalitytype": "string",
-    //            "percentage": "string",
-    //            "lastupdate": "2016-11-05T15:31:25.433Z"
-
     private String mPersonalityType;
     private String mPercentage;
     //private Date mLastUpdate;

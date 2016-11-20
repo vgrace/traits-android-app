@@ -50,6 +50,7 @@ import se.grace.vivian.traits.traits.Personality;
 import se.grace.vivian.traits.traits.PersonalityGridItem;
 import se.grace.vivian.traits.traits.Trait;
 import se.grace.vivian.traits.traits.User;
+import se.grace.vivian.traits.traits.UserTraits;
 import se.grace.vivian.traits.traits.UserTypePart;
 
 public class PersonalitiesActivity extends AppCompatActivity
@@ -59,21 +60,20 @@ public class PersonalitiesActivity extends AppCompatActivity
     public static final String TRAITS_USER_TRAITS = "TRAITS_USER_TRAITS";
 
     public SessionManager manager;
-    public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-    private final OkHttpClient client = new OkHttpClient();
     public static final String TAG = PersonalitiesActivity.class.getSimpleName();
-    private Api mApi = new Api();
+    private static Api mApi = new Api();
     private KeyStoring mKeyStoring = new KeyStoring();
-    private User mUser;
+    private static User mUser;
     private NavigationView navigationView;
     final ArrayList<PersonalityGridItem> mPersonalityGridItems = new ArrayList<PersonalityGridItem>();
     private Personality[] mPersonalities = new Personality[16];
     private Router mRouter = new Router();
     private Colors mColors = new Colors();
+    private static ArrayList<UserTraits> mUserTraitsList;
+    private static  ArrayList<UserTypePart> mUserTypeParts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         final Context mContext = this;
 
         super.onCreate(savedInstanceState);
@@ -100,14 +100,10 @@ public class PersonalitiesActivity extends AppCompatActivity
         checkUser();
 
         // Create PersonalityGridItem list
-        setupGridview(mContext);
-
-
-
-        // Get user traits [TODO later]
-        if(mUser.getUserTraits() != null && mUser.getUserTraits().size() > 0){
-            Log.d(TAG, "User Traits: " + mUser.getUserTraits().size());
-            Log.d(TAG, "User Traits: " + mUser.getUserTraits().get(0).getPersonalityType());
+        try {
+            getUserTypeParts(mContext);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -145,37 +141,72 @@ public class PersonalitiesActivity extends AppCompatActivity
         }
     }
 
-    protected void setupGridview(final Context context){
-        // Get User Type Parts
-        if(mUser.getUserTypeParts() != null && mUser.getUserTypeParts().size() > 0){
+    public static User getUser(){
+        return mUser;
+    }
 
-            //Get User type parts
-            Collections.sort(mUser.getUserTypeParts(), new UserTypePart());
-            Log.d(TAG, "User Type parts: " + "After sort");
-            Log.d(TAG, "User Type parts: " + mUser.getUserTypeParts().size());
-            Log.d(TAG, "User Type parts: " + mUser.getUserTypeParts().get(0).getPersonalityType());
-
-            // Get user type parts
-            ArrayList<UserTypePart> mUserTypeParts = mUser.getUserTypeParts();
-            for(int i = 0; i< mUserTypeParts.size(); i++)
-            {
-                PersonalityGridItem item = new PersonalityGridItem();
-                item.setType(mUserTypeParts.get(i).getPersonalityType());
-                item.setPercentage(Integer.parseInt(mUserTypeParts.get(i).getPercentage()));
-                item.setTypeColor(mColors.getColorByType(this, mUserTypeParts.get(i).getPersonalityType()));
-                mPersonalityGridItems.add(item);
+    // Get User Type Parts
+    public void getUserTypeParts(final Context context) throws Exception {
+        Log.d(TAG, "In Get User Type Parts");
+        String url = "http://traits-app-api.herokuapp.com/api/userTypePart/" + mUser.getUsername();
+        mApi.get(url, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                // Something went wrong
+                if(e.getMessage() != null)
+                    Log.d(TAG, e.getMessage());
+                else
+                    Log.d(TAG, "Failed to call GET");
             }
 
-            //Get att personalities
-            if(mPersonalityGridItems.size() < 16) {
-                try {
-                    getPersonalities(this);
-                    Log.d(TAG, mPersonalities.length + "");
-                } catch (Exception e) {
-                    e.printStackTrace();
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    final String responseStr = response.body().string();
+                    Log.d(TAG, responseStr);
+                    try {
+                        JSONObject jsonObject = new JSONObject(responseStr);
+                        JSONArray jsonarray = jsonObject.getJSONArray("usertypeparts");
+                        for (int i = 0; i < jsonarray.length(); i++) {
+                            JSONObject jsonobject = jsonarray.getJSONObject(i);
+                            PersonalityGridItem item = new PersonalityGridItem();
+                            String type = jsonobject.getString("personalitytype");
+                            item.setType(type);
+                            item.setPercentage(jsonobject.getInt("percentage"));
+                            item.setTypeColor(mColors.getColorByType(context, type));
+                            mPersonalityGridItems.add(item);
+                            //UserTypePart utp = new UserTypePart();
+                            //utp.setPersonalityType(jsonobject.getString("personalitytype"));
+                            //utp.setPercentage(jsonobject.getString("percentage"));
+                            //mUserTypeParts.add(utp);
+                        }
+                        //Get att personalities
+                        if(mPersonalityGridItems.size() < 16) {
+                            try {
+                                getPersonalities(context);
+                                Log.d(TAG, mPersonalities.length + "");
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                    }catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+                    //Run in main thread
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                        }
+                    });
+                }
+                else {
+                    // Request not successful
+                    Log.d(TAG, "Request not successful: "  +response.code() +" : "+ response.message());
                 }
             }
-        }
+        });
     }
 
     //public void setup
@@ -188,10 +219,13 @@ public class PersonalitiesActivity extends AppCompatActivity
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView parent, View view, int position, long id) {
+                TraitsActivity.clearTraitsList();
                 PersonalityGridItem personalityGridItem = mPersonalityGridItems.get(position);
                 Log.d(TAG, personalityGridItem.getType() + " was clicked!");
+
                 personalityAdapter.notifyDataSetChanged();
-                mRouter.GoToTraitsActivity(context, getPersonalityByType(personalityGridItem.getType()), mUser.getUserTraits());
+
+                mRouter.GoToTraitsActivity(context, getPersonalityByType(personalityGridItem.getType()));
             }
         });
     }
@@ -205,20 +239,10 @@ public class PersonalitiesActivity extends AppCompatActivity
         return null;
     }
 
-    protected okhttp3.Call get(String url, Callback callback) throws IOException {
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-
-        okhttp3.Call call = client.newCall(request);
-        call.enqueue(callback);
-        return call;
-    }
-
     public void getPersonalities(final Context context) throws Exception {
         Log.d(TAG, "In Get Personalities");
         String url = "http://traits-app-api.herokuapp.com/api/personality";
-        get(url, new Callback() {
+        mApi.get(url, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
                 // Something went wrong
@@ -309,6 +333,48 @@ public class PersonalitiesActivity extends AppCompatActivity
             t.setWeight(jsonTrait.getInt("weight"));
         }
         return traits;
+    }
+
+    public static void updateUserTypePart(String type, int typeScore){
+        try {
+            putUserTypePart(mUser.getUsername(), type, typeScore);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void putUserTypePart(String username, String type, int percentage) throws Exception {
+        Log.d(TAG, "IN API!! " + percentage);
+        String url = "http://traits-app-api.herokuapp.com/api/userTypePart/" + username;
+
+        String bodyJson = "{\n" +
+                "  \"personalitytype\": \"" + type + "\",\n" +
+                "  \"percentage\": \"" + percentage + "\",\n" +
+                "  \"lastupdate\": \"\"\n" +
+                "}";
+        Log.d(TAG, bodyJson);
+        mApi.put(url, bodyJson, new Callback() {
+            @Override
+            public void onFailure(okhttp3.Call call, IOException e) {
+                // Something went wrong
+                if(e.getMessage() != null)
+                    Log.d(TAG, e.getMessage());
+                else
+                    Log.d(TAG, "Failed to call PUT");
+            }
+
+            @Override
+            public void onResponse(okhttp3.Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    final String responseStr = response.body().string();
+                    Log.d(TAG, responseStr);
+
+                } else {
+                    // Request not successful
+                    Log.d(TAG, "Request not successful: "  +response.code() +" : "+ response.message());
+                }
+            }
+        });
     }
 
     @Override
