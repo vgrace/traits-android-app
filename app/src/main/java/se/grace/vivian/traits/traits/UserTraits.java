@@ -1,20 +1,31 @@
 package se.grace.vivian.traits.traits;
 
+import android.app.Activity;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.util.ArrayList;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Response;
+import se.grace.vivian.traits.Api;
+import se.grace.vivian.traits.ui.TraitsActivity;
 
 /**
  * Created by Vivi on 2016-11-06.
  */
 public class UserTraits implements Parcelable {
-
-    //"personalitytype": "string",
-    //        "traits": [
-    //        "string"
-    //        ]
-
+    public static final String TAG = UserTraits.class.getSimpleName();
     private String mPersonalityType;
     private String[] mTraits;
+    private static Api mApi = new Api();
 
     public String[] getTraits() {
         return mTraits;

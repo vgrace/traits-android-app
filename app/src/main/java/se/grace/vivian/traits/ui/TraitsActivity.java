@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Parcelable;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -45,6 +46,7 @@ import okhttp3.Callback;
 import okhttp3.Response;
 import se.grace.vivian.traits.Api;
 import se.grace.vivian.traits.Colors;
+import se.grace.vivian.traits.Globals;
 import se.grace.vivian.traits.R;
 import se.grace.vivian.traits.traits.Personality;
 import se.grace.vivian.traits.traits.PersonalityGridItem;
@@ -79,8 +81,8 @@ public class TraitsActivity extends AppCompatActivity {
     private static int personalityScore;
     private static int personalityColor;
     private static Api mApi = new Api();
-    private static User mUser;
-    //private static Context mContext;
+    //private static User mUser;
+    private Globals g = Globals.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,11 +91,12 @@ public class TraitsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_traits);
         //Context mContext = this;
         // Get User
-        mUser = PersonalitiesActivity.getUser();
+        //mUser = PersonalitiesActivity.getUser();
 
         // Get Personality
         Intent intent = getIntent();
-        mPersonality = intent.getParcelableExtra(PersonalitiesActivity.TRAITS_PERSONALITY);
+        mPersonality = g.getSelectedType(); //intent.getParcelableExtra(PersonalitiesActivity.TRAITS_PERSONALITY);
+
         Log.d(TAG, mPersonality.getType() + "");
         Log.d(TAG, mPersonality.getPercentage() + "");
         String selectedPersonality = mPersonality.getType();
@@ -164,12 +167,13 @@ public class TraitsActivity extends AppCompatActivity {
 
             }
         });
+
+
     }
 
     // Get User Type Parts
     public void getUserTraits(final Context context) throws Exception {
-        Log.d(TAG, "In Get User Type Parts");
-        String url = "http://traits-app-api.herokuapp.com/api/usertraits/" + mUser.getUsername() + "/" + mPersonality.getType() + "";
+        String url = "http://traits-app-api.herokuapp.com/api/usertraits/" + g.getUsername() + "/" + mPersonality.getType() + "";
         mApi.get(url, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {

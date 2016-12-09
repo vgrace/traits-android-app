@@ -22,6 +22,7 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 import se.grace.vivian.traits.Api;
+import se.grace.vivian.traits.Globals;
 import se.grace.vivian.traits.R;
 import se.grace.vivian.traits.traits.PersonalityGridItem;
 import se.grace.vivian.traits.traits.Trait;
@@ -46,7 +47,7 @@ public class TraitsTabFragment extends Fragment {
     // TODO: Rename and change types of parameters
     private String mParam1;
     private String mParam2;
-
+    private static Globals g = Globals.getInstance();
     static ArrayList<Trait> mTraitList = new ArrayList<Trait>();
     static View v;
 
@@ -108,6 +109,7 @@ public class TraitsTabFragment extends Fragment {
     public static void updateScore(){
         int newScore = (int) Math.round(calculateScore() * 100);
         scoresTextView.setText( newScore + " %");
+        g.setPersonalityGridItem(mPersonality.getType(), newScore);
         PersonalitiesActivity.updateUserTypePart(mPersonality.getType(), newScore);
     }
 
@@ -286,7 +288,8 @@ public class TraitsTabFragment extends Fragment {
     public static void setupTraitsGrid(ArrayList<Trait> traitList){
         //Setup traits grid
         GridView traitsGridView = (GridView) v.findViewById(R.id.traitsGrid);
-        final TraitsAdapter traitsAdapter = new TraitsAdapter(v.getContext(), TraitsActivity.getPersonality(), traitList);
+        //final TraitsAdapter traitsAdapter = new TraitsAdapter(v.getContext(), TraitsActivity.getPersonality(), traitList);
+        final TraitsAdapter traitsAdapter = new TraitsAdapter(v.getContext(), g.getSelectedType(), traitList);
         traitsGridView.setAdapter(traitsAdapter);
     }
 

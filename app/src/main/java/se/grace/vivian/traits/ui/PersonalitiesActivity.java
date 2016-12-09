@@ -42,6 +42,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import se.grace.vivian.traits.Api;
 import se.grace.vivian.traits.Colors;
+import se.grace.vivian.traits.Globals;
 import se.grace.vivian.traits.KeyStoring;
 import se.grace.vivian.traits.R;
 import se.grace.vivian.traits.Router;
@@ -65,16 +66,18 @@ public class PersonalitiesActivity extends AppCompatActivity
     private KeyStoring mKeyStoring = new KeyStoring();
     private static User mUser;
     private NavigationView navigationView;
-    final ArrayList<PersonalityGridItem> mPersonalityGridItems = new ArrayList<PersonalityGridItem>();
+    ArrayList<PersonalityGridItem> mPersonalityGridItems = new ArrayList<PersonalityGridItem>();
     private Personality[] mPersonalities = new Personality[16];
     private Router mRouter = new Router();
     private Colors mColors = new Colors();
     private static ArrayList<UserTraits> mUserTraitsList;
     private static  ArrayList<UserTypePart> mUserTypeParts;
+    private Globals g = Globals.getInstance();
+    private Context mContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        final Context mContext = this;
+        Context mContext = this;
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_personalities);
@@ -94,17 +97,38 @@ public class PersonalitiesActivity extends AppCompatActivity
         // Get User
         Intent intent = getIntent();
         mUser = intent.getParcelableExtra(LoginActivity.TRAITS_USER);
+        g.setUsername(mUser.getUsername());
         Log.d(TAG, mUser.getName() + "");
 
         // Check if user object is available, otherwise get it
         checkUser();
 
         // Create PersonalityGridItem list
-        try {
-            getUserTypeParts(mContext);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        //mPersonalityGridItems = g.getPersonalityGridItems();
+        //if(mPersonalityGridItems == null) {
+            try {
+                getUserTypeParts(mContext);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        //}
+    }
+
+    @Override
+    protected void onResume() {
+        Log.d(TAG, "ON RESUME!");
+        //
+
+        super.onResume();
+    }
+
+    @Override
+    protected void onRestart() {
+        Log.d(TAG, "ON RESTART");
+
+        mPersonalityGridItems = g.getPersonalityGridItems();
+        setGridViewAdapter(this);
+        super.onRestart();
     }
 
     protected void checkUser(){
@@ -131,13 +155,6 @@ public class PersonalitiesActivity extends AppCompatActivity
                     e.printStackTrace();
                 }
             }
-            else{
-                //Log.d(TAG, "status: " + status);
-            }
-        }
-        else
-        {
-
         }
     }
 
@@ -175,11 +192,14 @@ public class PersonalitiesActivity extends AppCompatActivity
                             item.setPercentage(jsonobject.getInt("percentage"));
                             item.setTypeColor(mColors.getColorByType(context, type));
                             mPersonalityGridItems.add(item);
+
                             //UserTypePart utp = new UserTypePart();
                             //utp.setPersonalityType(jsonobject.getString("personalitytype"));
                             //utp.setPercentage(jsonobject.getString("percentage"));
                             //mUserTypeParts.add(utp);
                         }
+                        g.setPersonalityGridItems(mPersonalityGridItems);
+
                         //Get att personalities
                         if(mPersonalityGridItems.size() < 16) {
                             try {
@@ -213,6 +233,7 @@ public class PersonalitiesActivity extends AppCompatActivity
     public void setGridViewAdapter(final Context context){
         //Add types to GridView
         GridView gridView = (GridView)findViewById(R.id.gridview);
+        mPersonalityGridItems = g.getPersonalityGridItems();
         final PersonalityAdapter personalityAdapter = new PersonalityAdapter(this, mPersonalityGridItems);
         gridView.setAdapter(personalityAdapter);
 
@@ -222,10 +243,9 @@ public class PersonalitiesActivity extends AppCompatActivity
                 TraitsActivity.clearTraitsList();
                 PersonalityGridItem personalityGridItem = mPersonalityGridItems.get(position);
                 Log.d(TAG, personalityGridItem.getType() + " was clicked!");
-
+                g.setSelectedType(getPersonalityByType(personalityGridItem.getType()));
                 personalityAdapter.notifyDataSetChanged();
-
-                mRouter.GoToTraitsActivity(context, getPersonalityByType(personalityGridItem.getType()));
+                mRouter.GoToTraitsActivity(context);
             }
         });
     }

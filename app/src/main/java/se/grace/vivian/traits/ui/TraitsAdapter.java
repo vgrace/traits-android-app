@@ -13,6 +13,7 @@ import android.widget.ToggleButton;
 
 import java.util.ArrayList;
 
+import se.grace.vivian.traits.Globals;
 import se.grace.vivian.traits.R;
 import se.grace.vivian.traits.traits.PersonalityGridItem;
 import se.grace.vivian.traits.traits.Trait;
@@ -26,7 +27,7 @@ public class TraitsAdapter extends BaseAdapter {
     private final Context mContext;
     private final PersonalityGridItem mPersonalityGridItem;
     private final ArrayList<Trait> mTraits;
-
+    Globals g = Globals.getInstance();
 
     public TraitsAdapter(Context context, PersonalityGridItem personalityGridItem, ArrayList<Trait> traits){
         this.mContext = context;
@@ -85,7 +86,6 @@ public class TraitsAdapter extends BaseAdapter {
                 toggleButton.setTextColor(ContextCompat.getColor(mContext, R.color.buttonDefault));
                 TraitsTabFragment.updateTraits(trait, false);
             }
-
             }
         });
         return convertView;
