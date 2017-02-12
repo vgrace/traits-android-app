@@ -83,6 +83,7 @@ public class TraitsTabFragment extends Fragment {
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
         mTraitList = new ArrayList<Trait>(); // Clear traitslist
+        Log.d(TAG, " mTraitsList Size: " +  mTraitList.size());
         mPersonality = TraitsActivity.getPersonality();
         try {
             getPersonalityTraits(mPersonality.getType());
@@ -146,7 +147,9 @@ public class TraitsTabFragment extends Fragment {
             }
         });
     }
+
     public static void updateTraits(Trait trait, boolean isUser){
+        Log.d(TAG, "mTraits in updateTraits size: " + mTraitList.size());
         for(int i = 0; i<mTraitList.size(); i++){
             Trait t = mTraitList.get(i);
             if(t.getTrait().equals(trait.getTrait())){
@@ -156,7 +159,8 @@ public class TraitsTabFragment extends Fragment {
             }
         }
         try {
-            putUserTrait("apitest@mail.com", trait.getType(), getUserTraitsForPut());
+            Log.d(TAG, "user to updateTraits to: " + g.getUsername());
+            putUserTrait(g.getUsername(), trait.getType(), getUserTraitsForPut());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -177,7 +181,7 @@ public class TraitsTabFragment extends Fragment {
         return traitsStr;
     }
     public static void putUserTrait(String username, String type, String traitStr) throws Exception {
-        Log.d(TAG, "IN API!! " + traitStr);
+        Log.d(TAG, "IN API!! " + traitStr + ", Username: " + username);
         String url = "http://traits-app-api.herokuapp.com/api/userTraits/";
 
         String bodyJson = "{\n" +

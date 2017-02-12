@@ -140,6 +140,7 @@ public class TraitsActivity extends AppCompatActivity {
         // Create the adapter that will return a fragment for each of the three
         // primary sections of the activity.
         mViewPager = (ViewPager) findViewById(R.id.container);
+        mViewPager.setOffscreenPageLimit(3);
         //mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
 
         final PagerAdapter adapter = new TabPagerAdapter
@@ -154,6 +155,7 @@ public class TraitsActivity extends AppCompatActivity {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
                 Log.d(TAG, "Tab changed");
+
                 mViewPager.setCurrentItem(tab.getPosition());
             }
 
